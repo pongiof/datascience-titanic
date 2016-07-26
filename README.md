@@ -2,7 +2,7 @@
 
 ## What's this?
 
-We are simply playing around with Titanic dataset. We plan to develop multiple models to predict whether a passanger would survive or not. For more information, [visit Kaggle](https://www.kaggle.com/c/titanic).
+We are simply playing around with the Titanic dataset. We plan to develop multiple models to predict whether a passenger would survive or not. For more information, [visit Kaggle](https://www.kaggle.com/c/titanic).
 
 ## Set up the enviroment
 

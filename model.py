@@ -2,10 +2,12 @@
 #import pdb; pdb.set_trace()
 
 # Importing libraries
+import time
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import cross_validation
+
 
 # Importing and cleaning data
 df = pd.read_csv(r'train.csv')
@@ -17,13 +19,14 @@ X['Age'] = X['Age'].fillna(X['Age'].mean())
 X = X.fillna(0) # TODO: find a better solution
 y = df['Survived']
 
-# Cross validation
-X_train, X_test, y_train, y_test = cross_validation.train_test_split(X, y, test_size = 0.4, random_state=0)
-
 # We fit the classifier to the train data and then we test it
-rfc = RandomForestClassifier()
-rfc.fit(X_train, y_train)
-results = rfc.predict(X_test)
+rfc = RandomForestClassifier(class_weight='balanced', random_state=1)
+
+def classify(X, y):
+	# Cross validation
+	X_train, X_test, y_train, y_test = cross_validation.train_test_split(X, y, test_size = 0.4)
+	rfc.fit(X_train, y_train)
+	return rfc.predict(X_test), y_test
 
 def calculate_stats(results, test):
 	"""Given two list-like objects calculates model stats."""
@@ -52,5 +55,15 @@ def calculate_stats(results, test):
 	precision = float(tp) / (tp + fp)
 	return {'accuracy': accuracy, 'recall': recall, 'precision': precision}
 
-accuracy = calculate_stats(results, y_test)
-print "stats: ", accuracy
+# Tic
+t = time.time()
+runs = []
+for index in range(100):
+	runs.append(calculate_stats(*classify(X,y)))
+# Toc
+print(time.time() - t)
+
+final_accuracy = reduce(lambda x, y: x + y, [run['accuracy'] for run in runs]) / len(runs)
+final_recall = reduce(lambda x, y: x + y, [run['recall'] for run in runs]) / len(runs)
+final_precision = reduce(lambda x, y: x + y, [run['precision'] for run in runs]) / len(runs)
+print "stats: \n - accuracy ", final_accuracy, "\n - recall", final_recall, "\n - precision", final_precision

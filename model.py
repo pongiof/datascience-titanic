@@ -25,18 +25,32 @@ rfc = RandomForestClassifier()
 rfc.fit(X_train, y_train)
 results = rfc.predict(X_test)
 
-def count_mistakes(results, test):
-	"""Given two list-like objects it returns a count of mistakes."""
+def calculate_stats(results, test):
+	"""Given two list-like objects calculates model stats."""
 	mistakes = 0
 	r = results.tolist()
 	t = test.tolist()
+	fp = 0
+	fn = 0
+	tp = 0
+	tn = 0
+	positive_values = sum(t)
+	negative_values = len(t) - positive_values
 	for index in range(len(t)):
-		if t[index] != r[index]:
-			mistakes +=1
-	return mistakes
+		if r[index] == 1:
+			if r[index] == t[index]:
+				tp+=1
+			else:
+				fp+=1
+		else:
+			if r[index] == t[index]:
+				tn+=1
+			else:
+				fn+=1
+	accuracy = 1 - float(fn + fp) / len(t)
+	recall = float(tp) / positive_values
+	precision = float(tp) / (tp + fp)
+	return {'accuracy': accuracy, 'recall': recall, 'precision': precision}
 
-mistakes = count_mistakes(results, y_test)
-print "The classifier made",mistakes,"mistakes."
-print "There were a total of",len(y_test.tolist()),"to identify."
-
-import pdb; pdb.set_trace()
+accuracy = calculate_stats(results, y_test)
+print "stats: ", accuracy

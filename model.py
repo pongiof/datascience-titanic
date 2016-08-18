@@ -1,14 +1,14 @@
-#!/usr/bin/env python
+#!/usr/bin/env frameworkpython
 #import pdb; pdb.set_trace()
 
 # Importing libraries
 import time
 import pandas as pd
 import numpy as np
+import sys
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import cross_validation
-
-import matplotlib.pyplot as plt
+from sklearn.tree import export_graphviz
 
 def calculate_stats(results, test):
 	"""Given two list-like objects calculates model stats."""
@@ -37,41 +37,50 @@ def calculate_stats(results, test):
 	precision = float(tp) / (tp + fp)
 	return {'accuracy': accuracy, 'recall': recall, 'precision': precision}
 
-# Importing and cleaning data
-df = pd.read_csv(r'train.csv')
-columns_names = ['Pclass', 'Sex', 'Age', 'Sibsp', 'Parch', 'Fare']
+if __name__ == "__main__":
+	# Importing and cleaning data
+	df = pd.read_csv(r'train.csv')
+	columns_names = ['Pclass', 'Sex', 'Age', 'Parch', 'Fare', 'SibSp']
 
-X = df.loc[:,columns_names]
-X['Sex'] = pd.factorize(df.Sex)[0]
-X['Age'] = X['Age'].fillna(X['Age'].mean())
-X = X.fillna(0) # TODO: find a better solution
-y = df['Survived']
+	X = df.loc[:,columns_names]
+	X['Sex'] = pd.factorize(df.Sex)[0]
+	X['Age'] = X['Age'].fillna(X['Age'].mean())
+	X = X.fillna(0) # TODO: find a better solution
+	y = df['Survived']
 
-accs = []
-x = range(1,10) 
-for giuseppe in x:
+	X_train, X_test, y_train, y_test = cross_validation.train_test_split(X, y, test_size = 0.4)
 
-	# We fit the classifier to the train data and then we test it
-	rfc = RandomForestClassifier(class_weight='balanced', random_state=1, max_depth = giuseppe)
+	# Fit the classifier
+	rfc = RandomForestClassifier(class_weight='balanced')
+	rfc.fit(X_train, y_train)
+	results = rfc.predict(X_test)
+	stats = calculate_stats(results, y_test)
 
-	runs = []
-	for index in range(5):
-		# Cross validation
-		X_train, X_test, y_train, y_test = cross_validation.train_test_split(X, y, test_size = 0.4)
-		rfc.fit(X_train, y_train)
-		runs.append(calculate_stats(rfc.predict(X_test), y_test))
+	# Print the statistics
+	print("Statistics:")
 
-	final_accuracy = reduce(lambda x, y: x + y, [run['accuracy'] for run in runs]) / len(runs)
-	final_recall = reduce(lambda x, y: x + y, [run['recall'] for run in runs]) / len(runs)
-	final_precision = reduce(lambda x, y: x + y, [run['precision'] for run in runs]) / len(runs)
+	for s, value in stats.iteritems():
+		print(s+":",value)
 
-	accs.append(final_accuracy)
+	# Check feature importance
+	importances = rfc.feature_importances_
+	std = np.std([tree.feature_importances_ for tree in rfc.estimators_],
+				 axis=0)
+	indices = np.argsort(importances)[::-1]
 
-# print "stats: \n - accuracy ", final_accuracy, "\n - recall", final_recall, "\n - precision", final_precision
+	# Print the feature ranking
+	print("Feature ranking:")
 
-print(accs)
+	for f in range(X.shape[1]):
+		print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
 
-plt.plot(x, accs)
-plt.show()
-
-import pdb; pdb.set_trace()
+	# Plot the feature importances of the classifier
+	if len(sys.argv) > 1 and sys.argv[1] == "--plot":
+		import matplotlib.pyplot as plt
+		plt.figure()
+		plt.title("Feature importances")
+		plt.bar(range(X.shape[1]), importances[indices],
+		       color="r", yerr=std[indices], align="center")
+		plt.xticks(range(X.shape[1]), [columns_names[x] for x in indices])
+		plt.xlim([-1, X.shape[1]])
+		plt.show()

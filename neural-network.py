@@ -4,11 +4,10 @@
 # Importing libraries
 import pandas as pd
 import numpy as np
-import sys
-import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestClassifier
 from sklearn import cross_validation
-from sklearn.tree import export_graphviz
+from pybrain.supervised.trainers import BackpropTrainer
+from pybrain.tools.shortcuts import buildNetwork
+from pybrain.datasets import SupervisedDataSet
 
 def calculate_stats(results, test):
 	"""Given two list-like objects calculates model stats."""
@@ -50,37 +49,16 @@ if __name__ == "__main__":
 
 	X_train, X_test, y_train, y_test = cross_validation.train_test_split(X, y, test_size = 0.4)
 
-	# Fit the classifier
-	rfc = RandomForestClassifier(class_weight='balanced')
-	rfc.fit(X_train, y_train)
-	results = rfc.predict(X_test)
-	stats = calculate_stats(results, y_test)
+    # Create the sample
+	ds = SupervisedDataSet(6,1)
 
-	# Print the statistics
-	print("Statistics:")
-	for porco in range(10):
-		print porco
-	for s, value in stats.iteritems():
-		print(s+":",value)
+	for index, row in X_train.iterrows():
+		x_value = list(row)
+		y_value = [y_train[index]]
+    		ds.addSample(x_value, y_value)
 
-	# Check feature importance
-	importances = rfc.feature_importances_
-	std = np.std([tree.feature_importances_ for tree in rfc.estimators_],
-				 axis=0)
-	indices = np.argsort(importances)[::-1]
-
-	# Print the feature ranking
-	print("Feature ranking:")
-
-	for f in range(X.shape[1]):
-		print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
-
-	# Plot the feature importances of the classifier
-	if len(sys.argv) > 1 and sys.argv[1] == "--plot":
-		plt.figure()
-		plt.title("Feature importances")
-		plt.bar(range(X.shape[1]), importances[indices],
-		       color="r", yerr=std[indices], align="center")
-		plt.xticks(range(X.shape[1]), [columns_names[x] for x in indices])
-		plt.xlim([-1, X.shape[1]])
-		plt.show()
+    # Build the neural network
+	n = buildNetwork(ds.indim,8,8,ds.outdim,recurrent=True)
+	t = BackpropTrainer(n,learningrate=0.01,momentum=0.5,verbose=True)
+	t.trainOnDataset(ds,1000)
+	t.testOnData(verbose=True)
